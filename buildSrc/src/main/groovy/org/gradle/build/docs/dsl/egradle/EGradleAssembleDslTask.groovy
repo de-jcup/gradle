@@ -69,7 +69,8 @@ class EGradleAssembleDslTask extends DefaultTask {
       //  provider.parse(sourceFile) /* 'dsl.xml' */
       	provider.emptyDoc()
         transformDocument(provider.document)
-        provider.write(destFile,true)
+        provider.write(destFile)
+        provider.write(new File(destFile.parent,"dsl-egradle_pretty-printed.xml"),true)
     }
 
     private def transformDocument(Document doc) {
