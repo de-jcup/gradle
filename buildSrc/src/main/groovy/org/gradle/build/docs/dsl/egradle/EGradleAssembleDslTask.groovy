@@ -81,7 +81,7 @@ class EGradleAssembleDslTask extends DefaultTask {
         ClassMetaDataRepository<ClassMetaData> classRepository = new EGradleSimpleClassMetaDataRepository<ClassMetaData>()
         classRepository.load(classMetaDataFile)
         
-        
+        String buildGradleVersion = getProject().getRootProject().file("version.txt").text.trim()
         //ClassMetaDataRepository<ClassLinkMetaData> linkRepository = new SimpleClassMetaDataRepository<ClassLinkMetaData>()
         //for every method found in class meta, create a javadoc/groovydoc link
        // classRepository.each {name, ClassMetaData metaData ->
@@ -97,7 +97,9 @@ class EGradleAssembleDslTask extends DefaultTask {
             EGradleDslDocModel model = createEGradleDslDocModel(doc, classRepository)//, loadPluginsMetaData())
             appendPluginsMetaData(model)
            
-             Element rootElement = doc.createElement("root")
+             Element rootElement = doc.createElement("dsl")
+             rootElement.setAttribute("type","gradle")
+             rootElement.setAttribute("version",buildGradleVersion)
              doc.appendChild(rootElement)
              model.classes.each { EGradleClassDoc classDoc ->
                Element classElement = doc.createElement("class")
