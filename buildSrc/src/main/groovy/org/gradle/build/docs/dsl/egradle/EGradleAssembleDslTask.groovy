@@ -21,7 +21,7 @@ import org.gradle.api.file.FileCollection
 import org.gradle.api.tasks.*
 import org.gradle.build.docs.*
 import org.gradle.build.docs.dsl.links.*
-import org.gradle.build.docs.dsl.source.model.ClassMetaData
+import org.gradle.build.docs.dsl.source.model.*
 import org.gradle.build.docs.model.*
 import org.w3c.dom.*
 import javax.xml.parsers.*
@@ -93,18 +93,41 @@ class EGradleAssembleDslTask extends DefaultTask {
         //Document doc = factory.newDocumentBuilder().newDocument();
         logger.quiet "before use"
         use(BuildableDOMCategory) {
-            logger.quiet "use 1"
             EGradleDslDocModel model = createEGradleDslDocModel(doc, classRepository)//, loadPluginsMetaData())
            
-             logger.quiet "use 2"
-             Element root = doc.createElement("root")
-             doc.appendChild(root)
-             logger.quiet "root=$root"
+             Element rootElement = doc.createElement("root")
+             doc.appendChild(rootElement)
              model.classes.each { EGradleClassDoc classDoc ->
-               Element clazzElement = doc.createElement("class")
-               clazzElement.setAttribute("name", classDoc.getName())
-               logger.quiet "root=$root"
-               root.appendChild(clazzElement)
+               Element classElement = doc.createElement("class")
+               classElement.setAttribute("name", classDoc.name)
+               logger.quiet "creating element: $classDoc.name"
+               
+               if (classDoc.deprecated){
+               		 logger.quiet "deprecated-1"
+                     Element deprecatedElement = doc.createElement("deprecated")
+                     classElement.appendChild(deprecatedElement)
+                     logger.quiet "deprecated-2"
+               }
+               if (classDoc.incubating){
+               		 logger.quiet "incubating-1"
+                     Element incubatingElement = doc.createElement("incubating")
+                     classElement.appendChild(incubatingElement)
+                     logger.quiet "incubating-2"
+               }
+               /* properties*/
+               for (PropertyMetaData propertyMetaData: classDoc.metaData.declaredProperties){
+               		 logger.quiet "property $propertyMetaData.name"
+               		 Element propertyElement = doc.createElement("property")
+               		 propertyElement.setAttribute("name", propertyMetaData.name)
+               		 TypeMetaData propertyType = propertyMetaData.type
+               		 logger.quiet "property tpye $propertyType"
+               		 propertyElement.setAttribute("type", propertyType.name)
+               		 logger.quiet "property 3"
+               		 classElement.appendChild(propertyElement)
+               }
+               //logger.quiet "element=$classElement"
+                logger.quiet "append to root element: $classElement"
+               rootElement.appendChild(classElement)
             }
         }
 

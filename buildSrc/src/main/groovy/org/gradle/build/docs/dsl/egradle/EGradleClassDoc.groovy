@@ -47,4 +47,10 @@ class EGradleClassDoc{
         return classMetaData.incubating
     }
     
+    ClassMetaData getMetaData(){
+    	return classMetaData	
+    }
+    
+    
+    
 }

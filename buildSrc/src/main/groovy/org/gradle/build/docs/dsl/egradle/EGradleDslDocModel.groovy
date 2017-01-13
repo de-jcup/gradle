@@ -23,7 +23,8 @@ import org.w3c.dom.Document
 
 class EGradleDslDocModel {
     private final Document document
-    private final Map<String, EGradleClassDoc> classes = [:]
+    /* use a tree map to have sorted class names*/
+    private final TreeMap<String, EGradleClassDoc> classes = [:]
     private final ClassMetaDataRepository<ClassMetaData> classMetaDataRepository
     private final LinkedList<String> currentlyBuilding = new LinkedList<String>()
 
