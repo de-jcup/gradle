@@ -94,39 +94,48 @@ class EGradleAssembleDslTask extends DefaultTask {
         logger.quiet "before use"
         use(BuildableDOMCategory) {
             EGradleDslDocModel model = createEGradleDslDocModel(doc, classRepository)//, loadPluginsMetaData())
+            appendPluginsMetaData(model)
            
              Element rootElement = doc.createElement("root")
              doc.appendChild(rootElement)
              model.classes.each { EGradleClassDoc classDoc ->
                Element classElement = doc.createElement("class")
                classElement.setAttribute("name", classDoc.name)
-               logger.quiet "creating element: $classDoc.name"
+               logger.info "creating element: $classDoc.name"
                
                if (classDoc.deprecated){
-               		 logger.quiet "deprecated-1"
+               		 logger.debug "deprecated-1"
                      Element deprecatedElement = doc.createElement("deprecated")
                      classElement.appendChild(deprecatedElement)
-                     logger.quiet "deprecated-2"
+                     logger.debug "deprecated-2"
                }
                if (classDoc.incubating){
-               		 logger.quiet "incubating-1"
+               		 logger.debug "incubating-1"
                      Element incubatingElement = doc.createElement("incubating")
                      classElement.appendChild(incubatingElement)
-                     logger.quiet "incubating-2"
+                     logger.debug "incubating-2"
                }
                /* properties*/
                for (PropertyMetaData propertyMetaData: classDoc.metaData.declaredProperties){
-               		 logger.quiet "property $propertyMetaData.name"
+               		 logger.debug "property $propertyMetaData.name"
                		 Element propertyElement = doc.createElement("property")
                		 propertyElement.setAttribute("name", propertyMetaData.name)
                		 TypeMetaData propertyType = propertyMetaData.type
-               		 logger.quiet "property tpye $propertyType"
+               		 logger.debug "property type $propertyType"
                		 propertyElement.setAttribute("type", propertyType.name)
-               		 logger.quiet "property 3"
+               		 logger.debug "property 3"
                		 classElement.appendChild(propertyElement)
                }
+               /* plugin meta extensions */
+               for (EGradleClassMetaPluginExtension me: classDoc.metaPluginExtensions){
+                     Element pluginElement = doc.createElement("plugin")
+               		 pluginElement.setAttribute("id", me.pluginId)
+               		 pluginElement.setAttribute("mixinClass", me.mixinClass)
+               		 pluginElement.setAttribute("extensionClass", me.extensionClass)
+               		 classElement.appendChild(pluginElement)
+               }
                //logger.quiet "element=$classElement"
-                logger.quiet "append to root element: $classElement"
+                logger.debug "append to root element: $classElement"
                rootElement.appendChild(classElement)
             }
         }
@@ -135,12 +144,11 @@ class EGradleAssembleDslTask extends DefaultTask {
     }
 
     @CompileStatic
-    EGradleDslDocModel createEGradleDslDocModel(Document document, ClassMetaDataRepository<ClassMetaData> classMetaData) {
-        // workaround to IBM JDK crash "groovy.lang.GroovyRuntimeException: Could not find matching constructor for..."
-        new EGradleDslDocModel(document, classMetaData)
+    EGradleDslDocModel createEGradleDslDocModel(Document document, ClassMetaDataRepository<ClassMetaData> classMetaDataRepository) {
+        new EGradleDslDocModel(document, classMetaDataRepository)
     }
 
-    def loadPluginsMetaData() {
+    def appendPluginsMetaData(EGradleDslDocModel model) {
         XIncludeAwareXmlProvider provider = new XIncludeAwareXmlProvider()
         provider.parse(pluginsMetaDataFile) /* plugins.xml */
         
@@ -157,19 +165,15 @@ class EGradleAssembleDslTask extends DefaultTask {
                 if (!targetClass) {
                     throw new RuntimeException("No targetClass specified for extension provided by plugin '$pluginId'.")
                 }
-                
-                /* def extension = extensions[targetClass]
-                if (!extension) {
-                    extension = new ClassExtensionMetaData(targetClass)
-                    extensions[targetClass] = extension
-                } */
-                
+                logger.quiet "targetClass=$targetClass"
+                def classDoc = model.getClassDoc(targetClass)  
                 def mixinClass = e.'@mixinClass'
-                
-                /* if (mixinClass) {
-                    extension.addMixin(pluginId, mixinClass)
-                } */
-                logger.quiet "mixinClass=$mixinClass"
+                EGradleClassMetaPluginExtension me = new EGradleClassMetaPluginExtension();
+                me.pluginId=pluginId
+                if (mixinClass) {
+                    me.mixinClass=mixinClass
+                }
+                //logger.quiet "mixinClass=$mixinClass"
                 def extensionClass = e.'@extensionClass'
                 if (extensionClass) {
                     def extensionId = e.'@id'
@@ -177,8 +181,11 @@ class EGradleAssembleDslTask extends DefaultTask {
                         throw new RuntimeException("No id specified for extension '$extensionClass' for plugin '$pluginId'.")
                     }
                     //extension.addExtension(pluginId, extensionId, extensionClass)
-                    println "extclass=$extensionClass ,id=$extensionId"
+                    me.extensionId=extensionId
+                    me.extensionClass=extensionClass
+                    
                 }
+             	classDoc.metaPluginExtensions.add(me)   
             }
         }
         return extensions

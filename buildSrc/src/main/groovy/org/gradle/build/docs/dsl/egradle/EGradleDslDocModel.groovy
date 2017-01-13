@@ -54,9 +54,10 @@ class EGradleDslDocModel {
     EGradleClassDoc getClassDoc(String className) {
         EGradleClassDoc classDoc = classes[className]
         if (classDoc == null) {
-            classDoc = loadClassDoc(className)
-            classes[className] = classDoc
+            //classDoc = loadClassDoc(className)
+            //classes[className] = classDoc
             //new ReferencedTypeBuilder(this).build(classDoc)
+            throw new RuntimeException("class doc is created for ALL classes, so should be always available!")
         }
         return classDoc
     }

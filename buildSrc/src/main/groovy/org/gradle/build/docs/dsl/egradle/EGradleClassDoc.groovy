@@ -25,6 +25,7 @@ class EGradleClassDoc{
     private final String id
     private final String simpleName
 	final ClassMetaData classMetaData
+	Set<EGradleClassMetaPluginExtension> metaPluginExtensions = new LinkedHashSet()
 	
 	EGradleClassDoc(String className, ClassMetaData classMetaData){
 		this.className = className
@@ -49,6 +50,10 @@ class EGradleClassDoc{
     
     ClassMetaData getMetaData(){
     	return classMetaData	
+    }
+    
+    List<EGradleClassMetaPluginExtension> getMetaDataExtensions(){
+    	return metaExtensions
     }
     
     
