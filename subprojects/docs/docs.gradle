@@ -23,7 +23,7 @@ import org.gradle.build.docs.Docbook2Xhtml
 import org.gradle.build.docs.Xhtml2Pdf
 import org.gradle.build.docs.dsl.source.GenerateDefaultImportsTask
 import org.gradle.build.docs.dsl.docbook.AssembleDslDocTask
-import org.gradle.build.docs.dsl.docbook.EGradleAssembleDslTask
+import org.gradle.build.docs.dsl.egradle.EGradleAssembleDslTask
 import org.gradle.build.docs.dsl.source.ExtractDslMetaDataTask
 import org.gradle.build.docs.releasenotes.*
 import org.gradle.build.docs.releasenotes.checks.*
@@ -236,10 +236,11 @@ task dslDocbook(type: AssembleDslDocTask, dependsOn: [dslMetaData]) {
 
 task dslEGradle(type: EGradleAssembleDslTask, dependsOn: [dslMetaData]) {
     sources = fileTree(dir: dslSrcDir, includes: ['*.xml'])
-    sourceFile = new File(dslSrcDir, 'dsl.xml')
+    
+    //sourceFile = new File(dslSrcDir, 'dsl.xml')
     classMetaDataFile = dslMetaData.destFile
     pluginsMetaDataFile = new File(dslSrcDir, 'plugins.xml')
-    destFile = new File(egradleSrc, 'dsl.xml')
+    destFile = new File(egradleSrc, 'egradle-dsl.xml')
     linksFile = new File(egradleSrc, 'api-links.bin')
 }
 
