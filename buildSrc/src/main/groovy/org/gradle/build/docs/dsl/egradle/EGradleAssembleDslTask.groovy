@@ -69,7 +69,7 @@ class EGradleAssembleDslTask extends DefaultTask {
       //  provider.parse(sourceFile) /* 'dsl.xml' */
       	provider.emptyDoc()
         transformDocument(provider.document)
-        provider.write(destFile)
+        provider.write(destFile,true)
     }
 
     private def transformDocument(Document doc) {
