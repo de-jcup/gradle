@@ -65,7 +65,7 @@ class EGradleAssembleDslTask extends DefaultTask {
 
     @TaskAction
     def transform() {
-    	XIncludeAwareXmlProvider provider = new XIncludeAwareXmlProvider()
+    	EGradleXIncludeAwareXmlProvider provider = new EGradleXIncludeAwareXmlProvider()
       //  provider.parse(sourceFile) /* 'dsl.xml' */
       	provider.emptyDoc()
         transformDocument(provider.document)
@@ -102,21 +102,32 @@ class EGradleAssembleDslTask extends DefaultTask {
                Element classElement = doc.createElement("class")
                classElement.setAttribute("name", classDoc.name)
                logger.info "creating element: $classDoc.name"
-               
+               def classMetaData = classDoc.metaData
                if (classDoc.deprecated){
-               		 logger.debug "deprecated-1"
-                     Element deprecatedElement = doc.createElement("deprecated")
-                     classElement.appendChild(deprecatedElement)
-                     logger.debug "deprecated-2"
+                   classElement.setAttribute("deprecated","true")
                }
                if (classDoc.incubating){
-               		 logger.debug "incubating-1"
-                     Element incubatingElement = doc.createElement("incubating")
-                     classElement.appendChild(incubatingElement)
-                     logger.debug "incubating-2"
+               	   classElement.setAttribute("incubating","true")
+               }
+               def superClassMetaData = classMetaData.superClass
+               if (superClassMetaData){
+                	Element superClassElement = doc.createElement("superClass")
+               		superClassElement.setAttribute("name",superClassMetaData.className)
+               		classElement.appendChild(superClassElement)
+               }
+               if (classMetaData.interface){
+               	 	classElement.setAttribute("interface", "true")
+               }
+               
+               if (classMetaData.groovy){
+               	 	classElement.setAttribute("groovy", "true")
+               }
+               
+               if (classMetaData.enum){
+               	 	classElement.setAttribute("enum", "true")
                }
                /* properties*/
-               for (PropertyMetaData propertyMetaData: classDoc.metaData.declaredProperties){
+               for (PropertyMetaData propertyMetaData: classMetaData.declaredProperties){
                		 logger.debug "property $propertyMetaData.name"
                		 Element propertyElement = doc.createElement("property")
                		 propertyElement.setAttribute("name", propertyMetaData.name)
@@ -124,18 +135,47 @@ class EGradleAssembleDslTask extends DefaultTask {
                		 logger.debug "property type $propertyType"
                		 propertyElement.setAttribute("type", propertyType.name)
                		 logger.debug "property 3"
+               		 appendRawCommentText(doc,propertyElement, propertyMetaData)
                		 classElement.appendChild(propertyElement)
+               }
+               /* methods */
+                for (MethodMetaData methodMetaData: classMetaData.declaredMethods){
+               		 logger.debug "method $methodMetaData.name"
+               		 Element methodElement = doc.createElement("method")
+               		 methodElement.setAttribute("name", methodMetaData.name)
+               		 TypeMetaData returnType = methodMetaData.returnType
+               		 methodElement.setAttribute("returnType", returnType.name)
+               		 
+               		 for (ParameterMetaData paramMetaData: methodMetaData.parameters){
+               		 	  Element paramElement = doc.createElement("param")
+               		 	  paramElement.setAttribute("name",paramMetaData.name)
+               		 	  paramElement.setAttribute("type", paramMetaData.type.name)
+               		 	  
+               		 	  methodElement.appendChild(paramElement)
+               		 }
+               		 appendRawCommentText(doc,methodElement, methodMetaData)
+               		 classElement.appendChild(methodElement)
                }
                /* plugin meta extensions */
                for (EGradleClassMetaPluginExtension me: classDoc.metaPluginExtensions){
                      Element pluginElement = doc.createElement("plugin")
                		 pluginElement.setAttribute("id", me.pluginId)
-               		 pluginElement.setAttribute("mixinClass", me.mixinClass)
-               		 pluginElement.setAttribute("extensionClass", me.extensionClass)
+                     if (me.mixinClass){
+                     	  Element mixinElement = doc.createElement("mixin")
+               		      mixinElement.setAttribute("class", me.mixinClass)
+               		      pluginElement.appendChild(mixinElement)
+                     }
+                     if (me.extensionId){
+                      	  Element extensionElement = doc.createElement("extension")
+               		      extensionElement.setAttribute("id", me.extensionId)
+               		      extensionElement.setAttribute("class", me.extensionClass)
+               		      pluginElement.appendChild(extensionElement)
+                     }
                		 classElement.appendChild(pluginElement)
                }
                //logger.quiet "element=$classElement"
                 logger.debug "append to root element: $classElement"
+               appendRawCommentText(doc,classElement, classMetaData)
                rootElement.appendChild(classElement)
             }
         }
@@ -147,6 +187,20 @@ class EGradleAssembleDslTask extends DefaultTask {
     EGradleDslDocModel createEGradleDslDocModel(Document document, ClassMetaDataRepository<ClassMetaData> classMetaDataRepository) {
         new EGradleDslDocModel(document, classMetaDataRepository)
     }
+    
+    def appendRawCommentText(Document doc, Element parentElement, AbstractLanguageElement languageElement){
+    	// FIXME ATR, 13.01.2017 : javadoc converter like in docbook done would be nice: see JavadocConverter
+    	String rawCommentText = languageElement.getRawCommentText();
+    	if (rawCommentText!=null && rawCommentText.length() >0 ){
+	    	CDATASection cdata = doc.createCDATASection(rawCommentText);
+	    	
+	    	Element rawCommentElement = doc.createElement("rawComment")
+	    	rawCommentElement.appendChild(cdata);
+	    	parentElement.appendChild(rawCommentElement)
+    	}
+    }
+    
+    
 
     def appendPluginsMetaData(EGradleDslDocModel model) {
         XIncludeAwareXmlProvider provider = new XIncludeAwareXmlProvider()
