@@ -53,8 +53,8 @@ class EGradleAssembleDslTask extends DefaultTask {
     @InputFile
     File pluginsMetaDataFile
 
-    @OutputFile
-    File destFile
+    @OutputDirectory
+    File destFolder
 
     @OutputFile
     File linksFile
@@ -63,17 +63,17 @@ class EGradleAssembleDslTask extends DefaultTask {
     @InputFiles
     FileCollection sources
 
+	String buildGradleVersion
+
     @TaskAction
-    def transform() {
+    def generate() {
     	EGradleXIncludeAwareXmlProvider provider = new EGradleXIncludeAwareXmlProvider()
-      //  provider.parse(sourceFile) /* 'dsl.xml' */
-      	provider.emptyDoc()
-        transformDocument(provider.document)
-        provider.write(destFile)
-        provider.write(new File(destFile.parent,"dsl-egradle_pretty-printed.xml"),true)
+        transformDocument(provider)
+        // provider.write(destFile)
+        // provider.write(new File(destFile.parent,"dsl-egradle_pretty-printed.xml"),true)
     }
 
-    private def transformDocument(Document doc) {
+    private def transformDocument(EGradleXIncludeAwareXmlProvider provider) {
     	Project p = null
     	DocGenerationException dge = null
     	 
@@ -81,53 +81,62 @@ class EGradleAssembleDslTask extends DefaultTask {
         ClassMetaDataRepository<ClassMetaData> classRepository = new EGradleSimpleClassMetaDataRepository<ClassMetaData>()
         classRepository.load(classMetaDataFile)
         
-        String buildGradleVersion = getProject().getRootProject().file("version.txt").text.trim()
-        //ClassMetaDataRepository<ClassLinkMetaData> linkRepository = new SimpleClassMetaDataRepository<ClassLinkMetaData>()
-        //for every method found in class meta, create a javadoc/groovydoc link
-       // classRepository.each {name, ClassMetaData metaData ->
-       //     linkRepository.put(name, new ClassLinkMetaData(metaData))
-       // }
-        //def doc = new Document()
-        
-        //DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-        //factory.setNamespaceAware(true);
-        //Document doc = factory.newDocumentBuilder().newDocument();
-        logger.quiet "before use"
+        buildGradleVersion = getProject().getRootProject().file("version.txt").text.trim()
+       
+        logger.quiet "start"
         use(BuildableDOMCategory) {
-            EGradleDslDocModel model = createEGradleDslDocModel(doc, classRepository)//, loadPluginsMetaData())
+            EGradleDslDocModel model = createEGradleDslDocModel(classRepository)//, loadPluginsMetaData())
             appendPluginsMetaData(model)
            
-             Element rootElement = doc.createElement("dsl")
-             rootElement.setAttribute("type","gradle")
-             rootElement.setAttribute("version",buildGradleVersion)
-             doc.appendChild(rootElement)
+            File destVersionFolder=new File(destFolder,buildGradleVersion);
+           
              model.classes.each { EGradleClassDoc classDoc ->
-               Element classElement = doc.createElement("class")
-               classElement.setAttribute("name", classDoc.name)
+             	 createNewDocument(provider, classDoc)
+                 String fileName = classDoc.name.replaceAll("\\.","/")
+                 File file = new File(destVersionFolder,fileName+".xml")
+                 file.parentFile.mkdirs()
+                 provider.write(file,true)
+            }
+        }
+
+        // linkRepository.store(linksFile)
+    }
+
+	def createNewDocument(EGradleXIncludeAwareXmlProvider provider, EGradleClassDoc classDoc){
+			 provider.emptyDoc()
+			 Document doc = provider.document
+			 
+			 Element typeElement = doc.createElement("type")
+             doc.appendChild(typeElement)
+	
+             typeElement.setAttribute("language","gradle")
+             typeElement.setAttribute("version", buildGradleVersion)
+             
+               typeElement.setAttribute("name", classDoc.name)
                logger.info "creating element: $classDoc.name"
                def classMetaData = classDoc.metaData
                if (classDoc.deprecated){
-                   classElement.setAttribute("deprecated","true")
+                   typeElement.setAttribute("deprecated","true")
                }
                if (classDoc.incubating){
-               	   classElement.setAttribute("incubating","true")
+               	   typeElement.setAttribute("incubating","true")
                }
                def superClassMetaData = classMetaData.superClass
                if (superClassMetaData){
                 	Element superClassElement = doc.createElement("superClass")
                		superClassElement.setAttribute("name",superClassMetaData.className)
-               		classElement.appendChild(superClassElement)
+               		typeElement.appendChild(superClassElement)
                }
                if (classMetaData.interface){
-               	 	classElement.setAttribute("interface", "true")
+               	 	typeElement.setAttribute("interface", "true")
                }
                
                if (classMetaData.groovy){
-               	 	classElement.setAttribute("groovy", "true")
+               	 	typeElement.setAttribute("groovy", "true")
                }
                
                if (classMetaData.enum){
-               	 	classElement.setAttribute("enum", "true")
+               	 	typeElement.setAttribute("enum", "true")
                }
                /* properties*/
                for (PropertyMetaData propertyMetaData: classMetaData.declaredProperties){
@@ -138,8 +147,8 @@ class EGradleAssembleDslTask extends DefaultTask {
                		 logger.debug "property type $propertyType"
                		 propertyElement.setAttribute("type", propertyType.name)
                		 logger.debug "property 3"
-               		 appendRawCommentText(doc,propertyElement, propertyMetaData)
-               		 classElement.appendChild(propertyElement)
+               		 appendDescription(doc,propertyElement, propertyMetaData)
+               		 typeElement.appendChild(propertyElement)
                }
                /* methods */
                 for (MethodMetaData methodMetaData: classMetaData.declaredMethods){
@@ -150,14 +159,14 @@ class EGradleAssembleDslTask extends DefaultTask {
                		 methodElement.setAttribute("returnType", returnType.name)
                		 
                		 for (ParameterMetaData paramMetaData: methodMetaData.parameters){
-               		 	  Element paramElement = doc.createElement("param")
+               		 	  Element paramElement = doc.createElement("parameter")
                		 	  paramElement.setAttribute("name",paramMetaData.name)
                		 	  paramElement.setAttribute("type", paramMetaData.type.name)
                		 	  
                		 	  methodElement.appendChild(paramElement)
                		 }
-               		 appendRawCommentText(doc,methodElement, methodMetaData)
-               		 classElement.appendChild(methodElement)
+               		 appendDescription(doc,methodElement, methodMetaData)
+               		 typeElement.appendChild(methodElement)
                }
                /* plugin meta extensions */
                for (EGradleClassMetaPluginExtension me: classDoc.metaPluginExtensions){
@@ -174,32 +183,27 @@ class EGradleAssembleDslTask extends DefaultTask {
                		      extensionElement.setAttribute("class", me.extensionClass)
                		      pluginElement.appendChild(extensionElement)
                      }
-               		 classElement.appendChild(pluginElement)
+               		 typeElement.appendChild(pluginElement)
                }
-               //logger.quiet "element=$classElement"
-                logger.debug "append to root element: $classElement"
-               appendRawCommentText(doc,classElement, classMetaData)
-               rootElement.appendChild(classElement)
-            }
-        }
-
-        // linkRepository.store(linksFile)
-    }
+               logger.debug "append to root element: $typeElement"
+               appendDescription(doc,typeElement, classMetaData)
+               
+	}
 
     @CompileStatic
-    EGradleDslDocModel createEGradleDslDocModel(Document document, ClassMetaDataRepository<ClassMetaData> classMetaDataRepository) {
-        new EGradleDslDocModel(document, classMetaDataRepository)
+    EGradleDslDocModel createEGradleDslDocModel(ClassMetaDataRepository<ClassMetaData> classMetaDataRepository) {
+        new EGradleDslDocModel(classMetaDataRepository)
     }
     
-    def appendRawCommentText(Document doc, Element parentElement, AbstractLanguageElement languageElement){
+    def appendDescription(Document doc, Element parentElement, AbstractLanguageElement languageElement){
     	// FIXME ATR, 13.01.2017 : javadoc converter like in docbook done would be nice: see JavadocConverter
-    	String rawCommentText = languageElement.getRawCommentText();
-    	if (rawCommentText!=null && rawCommentText.length() >0 ){
-	    	CDATASection cdata = doc.createCDATASection(rawCommentText);
+    	String descriptionText = languageElement.getRawCommentText();
+    	if (descriptionText!=null && descriptionText.length() >0 ){
+	    	CDATASection cdata = doc.createCDATASection(descriptionText);
 	    	
-	    	Element rawCommentElement = doc.createElement("rawComment")
-	    	rawCommentElement.appendChild(cdata);
-	    	parentElement.appendChild(rawCommentElement)
+	    	Element descriptionElement = doc.createElement("description")
+	    	descriptionElement.appendChild(cdata);
+	    	parentElement.appendChild(descriptionElement)
     	}
     }
     

@@ -98,6 +98,7 @@ ext {
     samplesDir = file("$buildDir/samples")
     docbookSrc = new File(project.buildDir, 'src')
     samplesSrcDir = file('src/samples')
+    
     egradleSrc = new File(project.buildDir, 'src-egradle')
 }
 
@@ -232,8 +233,8 @@ task dslEGradle(type: EGradleAssembleDslTask, dependsOn: [dslMetaData]) {
     //sourceFile = new File(dslSrcDir, 'dsl.xml')
     classMetaDataFile = dslMetaData.destFile
     pluginsMetaDataFile = new File(dslSrcDir, 'plugins.xml')
-    destFile = new File(egradleSrc, 'egradle-dsl.xml')
-    linksFile = new File(egradleSrc, 'api-links.bin')
+    destFolder = new File(egradleSrc,'egradle-dsl')
+    linksFile = new File(egradleSrc,, 'api-links.bin')
 }
 
 task dslStandaloneDocbook(type: UserGuideTransformTask, dependsOn: [dslDocbook]) {

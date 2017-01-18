@@ -19,17 +19,14 @@ import org.gradle.build.docs.*
 import org.gradle.build.docs.dsl.source.*
 import org.gradle.build.docs.dsl.source.model.*
 import org.gradle.build.docs.model.*
-import org.w3c.dom.Document
 
 class EGradleDslDocModel {
-    private final Document document
     /* use a tree map to have sorted class names*/
     private final TreeMap<String, EGradleClassDoc> classes = [:]
     private final ClassMetaDataRepository<ClassMetaData> classMetaDataRepository
     private final LinkedList<String> currentlyBuilding = new LinkedList<String>()
 
-    EGradleDslDocModel(Document document, ClassMetaDataRepository<ClassMetaData> classMetaDataRepository) {
-        this.document = document
+    EGradleDslDocModel(ClassMetaDataRepository<ClassMetaData> classMetaDataRepository) {
         this.classMetaDataRepository = classMetaDataRepository
         
         initClasses()
