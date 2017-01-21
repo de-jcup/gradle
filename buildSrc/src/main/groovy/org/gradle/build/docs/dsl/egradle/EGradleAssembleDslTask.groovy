@@ -69,8 +69,6 @@ class EGradleAssembleDslTask extends DefaultTask {
     def generate() {
     	EGradleXIncludeAwareXmlProvider provider = new EGradleXIncludeAwareXmlProvider()
         transformDocument(provider)
-        // provider.write(destFile)
-        // provider.write(new File(destFile.parent,"dsl-egradle_pretty-printed.xml"),true)
     }
 
     private def transformDocument(EGradleXIncludeAwareXmlProvider provider) {

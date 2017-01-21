@@ -22,6 +22,7 @@ import org.gradle.build.docs.Docbook2Xhtml
 import org.gradle.build.docs.dsl.egradle.EGradleAssembleDslTask
 import org.gradle.build.docs.dsl.source.GenerateDefaultImportsTask
 import org.gradle.build.docs.dsl.docbook.AssembleDslDocTask
+import org.gradle.build.docs.dsl.docbook.AssembleEGradleDslDocTask
 import org.gradle.build.docs.dsl.source.ExtractDslMetaDataTask
 import org.gradle.build.docs.releasenotes.*
 import org.gradle.build.docs.releasenotes.checks.*
@@ -100,6 +101,7 @@ ext {
     samplesSrcDir = file('src/samples')
     
     egradleSrc = new File(project.buildDir, 'src-egradle')
+    egradleSrc2 = new File(project.buildDir, 'src-egradle2')
 }
 
 ext.outputs = [:]
@@ -225,6 +227,16 @@ task dslDocbook(type: AssembleDslDocTask, dependsOn: [dslMetaData]) {
     pluginsMetaDataFile = new File(dslSrcDir, 'plugins.xml')
     destFile = new File(docbookSrc, 'dsl.xml')
     linksFile = new File(docbookSrc, 'api-links.bin')
+}
+
+task dslEGradle2(type: AssembleEGradleDslDocTask, dependsOn: [dslMetaData]) {
+    inputs.files fileTree(dir: dslSrcDir, includes: ['*.xml'])
+    sourceFile = new File(dslSrcDir, 'dsl.xml')
+    classMetaDataFile = dslMetaData.destFile
+    pluginsMetaDataFile = new File(dslSrcDir, 'plugins.xml')
+    destFolder = new File(egradleSrc2,'egradle2-dsl')
+    destFile = new File(egradleSrc2, 'egradle2-dsl-unused-but-necessary-because-of-extend.xml')
+    linksFile = new File(egradleSrc2, 'egradle2-api-links.bin')
 }
 
 task dslEGradle(type: EGradleAssembleDslTask, dependsOn: [dslMetaData]) {
