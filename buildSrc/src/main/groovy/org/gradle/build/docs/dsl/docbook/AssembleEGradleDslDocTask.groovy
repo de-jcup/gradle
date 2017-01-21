@@ -307,30 +307,41 @@ class AssembleEGradleDslDocTask extends AssembleDslDocTask {
                		 appendDescription(doc,methodElement, methodMetaData)
                		 typeElement.appendChild(methodElement)
                }
+               logger.debug "append to root element: $typeElement"
+               appendDescription(doc,typeElement, classMetaData)
+               if (false){
+               		return;
+               }
                /* block docs*/
                for (ClassExtensionDoc extensionDoc : classDoc.getClassExtensions()) {
 		                for (BlockDoc blockDoc : extensionDoc.getExtensionBlocks()) {
 		                    if (blockDoc.isMultiValued()) {
 					            typeElement.appendChild(doc.createTextNode("Each "));
-					            typeElement.appendChild(linkRenderer.link(blockDoc.getType(), listener));
+					            
+					            //typeElement.appendChild(linkRenderer.link(blockDoc.getType(), listener));
+					            TypeMetaData metaData = blockDoc.getType();
+					            typeElement.appendChild(doc.createTextNode(metaData.getName()));
 					            typeElement.appendChild(doc.createTextNode(" in "));
 					            // TODO - add linkRenderer.link(property)
 					            Element link = doc.createElement("link");
 					            link.setAttribute("linkend", blockDoc.getBlockProperty().getId());
-					            literal = doc.createElement("literal");
+					            Element literal = doc.createElement("literal");
 					            link.appendChild(literal);
 					            literal.appendChild(doc.createTextNode(blockDoc.getBlockProperty().getName()));
 					        } else {
-					            typeElement.appendChild(linkRenderer.link(blockDoc.getType(), listener));
+					            TypeMetaData metaData = blockDoc.getType();
+					            typeElement.appendChild(doc.createTextNode(metaData.getName()));
+					            // typeElement.appendChild(linkRenderer.link(blockDoc.getType(), listener));
 					            typeElement.appendChild(doc.createTextNode(" from "));
 					            // TODO - add linkRenderer.link(property)
 					            Element link = doc.createElement("link");
 					            typeElement.appendChild(link);
 					            link.setAttribute("linkend", blockDoc.getBlockProperty().getId());
-					            literal = doc.createElement("literal");
+					            Element literal = doc.createElement("literal");
 					            link.appendChild(literal);
 					            literal.appendChild(doc.createTextNode(blockDoc.getBlockProperty().getName()));
 
+       					
        						 }
 		                }
 		             }
@@ -351,8 +362,7 @@ class AssembleEGradleDslDocTask extends AssembleDslDocTask {
                //      }
                //		 typeElement.appendChild(pluginElement)
                //}
-               logger.debug "append to root element: $typeElement"
-               appendDescription(doc,typeElement, classMetaData)
+               
                
 	}
 
