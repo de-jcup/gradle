@@ -243,6 +243,7 @@ class AssembleEGradleDslDocTask extends AssembleDslDocTask {
     def createNewDocument(XIncludeAwareXmlProvider provider, ClassDoc classDoc,LinkRenderer linkRenderer){
 			 provider.emptyDoc()
 			 Document doc = provider.document
+			 //JavadocConverter jdConverter = new JavadocConverter(doc, linkBuilder);
 			 
 			 Element typeElement = doc.createElement("type")
              doc.appendChild(typeElement)
@@ -286,7 +287,7 @@ class AssembleEGradleDslDocTask extends AssembleDslDocTask {
                		 logger.debug "property type $propertyType"
                		 propertyElement.setAttribute("type", propertyType.name)
                		 logger.debug "property 3"
-               		 appendDescription(doc,propertyElement, propertyMetaData)
+               		 appendDescription(classDoc, doc,propertyElement, propertyMetaData)
                		 typeElement.appendChild(propertyElement)
                }
                /* methods */
@@ -304,47 +305,30 @@ class AssembleEGradleDslDocTask extends AssembleDslDocTask {
                		 	  
                		 	  methodElement.appendChild(paramElement)
                		 }
-               		 appendDescription(doc,methodElement, methodMetaData)
+               		 appendDescription(classDoc, doc,methodElement, methodMetaData)
                		 typeElement.appendChild(methodElement)
                }
                logger.debug "append to root element: $typeElement"
-               appendDescription(doc,typeElement, classMetaData)
+               appendDescription(classDoc,doc,typeElement, classMetaData)
                if (false){
                		return;
                }
+               Element blockDocsElement = doc.createElement("blockDocs");
+               typeElement.appendChild(blockDocsElement);
+               
                /* block docs*/
                for (ClassExtensionDoc extensionDoc : classDoc.getClassExtensions()) {
-		                for (BlockDoc blockDoc : extensionDoc.getExtensionBlocks()) {
-		                    if (blockDoc.isMultiValued()) {
-					            typeElement.appendChild(doc.createTextNode("Each "));
-					            
-					            //typeElement.appendChild(linkRenderer.link(blockDoc.getType(), listener));
-					            TypeMetaData metaData = blockDoc.getType();
-					            typeElement.appendChild(doc.createTextNode(metaData.getName()));
-					            typeElement.appendChild(doc.createTextNode(" in "));
-					            // TODO - add linkRenderer.link(property)
-					            Element link = doc.createElement("link");
-					            link.setAttribute("linkend", blockDoc.getBlockProperty().getId());
-					            Element literal = doc.createElement("literal");
-					            link.appendChild(literal);
-					            literal.appendChild(doc.createTextNode(blockDoc.getBlockProperty().getName()));
-					        } else {
-					            TypeMetaData metaData = blockDoc.getType();
-					            typeElement.appendChild(doc.createTextNode(metaData.getName()));
-					            // typeElement.appendChild(linkRenderer.link(blockDoc.getType(), listener));
-					            typeElement.appendChild(doc.createTextNode(" from "));
-					            // TODO - add linkRenderer.link(property)
-					            Element link = doc.createElement("link");
-					            typeElement.appendChild(link);
-					            link.setAttribute("linkend", blockDoc.getBlockProperty().getId());
-					            Element literal = doc.createElement("literal");
-					            link.appendChild(literal);
-					            literal.appendChild(doc.createTextNode(blockDoc.getBlockProperty().getName()));
-
-       					
-       						 }
-		                }
-		             }
+	                for (BlockDoc blockDoc : extensionDoc.getExtensionBlocks()) {
+           
+                  		Element blockDocElement = doc.createElement("blockDoc");
+               			blockDocsElement.appendChild(blockDocElement);
+                    	blockDocElement.setAttribute("multiValued",""+blockDoc.isMultiValued())
+			            TypeMetaData metaData = blockDoc.getType();
+			            blockDocElement.setAttribute("type", metaData.getName());
+			            blockDocElement.setAttribute("id", blockDoc.getBlockProperty().getId());
+			            blockDocElement.setAttribute("name", blockDoc.getBlockProperty().getName());
+   					}
+		        }
                /* plugin meta extensions */
                //for (EGradleClassMetaPluginExtension me: classDoc.metaPluginExtensions){
                //      Element pluginElement = doc.createElement("plugin")
@@ -366,9 +350,56 @@ class AssembleEGradleDslDocTask extends AssembleDslDocTask {
                
 	}
 
-    def appendDescription(Document doc, Element parentElement, AbstractLanguageElement languageElement){
+    def appendDescription(ClassDoc classDoc, Document doc, Element parentElement, AbstractLanguageElement languageElement){
     	// FIXME ATR, 13.01.2017 : javadoc converter like in docbook done would be nice: see JavadocConverter
-    	String descriptionText = languageElement.getRawCommentText();
+    	String descriptionText =null;
+    	DslElementDoc elementDoc=null;
+    	logger.quiet "append description: $languageElement"
+    	if (languageElement instanceof ClassMetaData){
+    		elementDoc=classDoc;
+    		logger.quiet "identified as classDoc"
+    	}else if (languageElement instanceof MethodMetaData){
+    		// FIXME ATR, 21.01.2017: implement search for MethodDoc
+    	}else if (languageElement instanceof PropertyMetaData){
+    		// FIXME ATR, 21.01.2017: implement search for PropertyDoc
+    	}
+    	
+    	if (elementDoc!=null){
+    		try{
+	    		Element element = elementDoc.getDescription();
+	    		if (element!=null){
+	    			logger.quiet "-- element not null"
+	    			/* FIXME ATR, check if this correct...*/
+	    			Element descriptionElement = doc.createElement("description")
+	    			Node duplicated = doc.importNode(element,true);
+	    			descriptionElement.appendChild(duplicated);
+	    			parentElement.appendChild(descriptionElement)
+	    			//return;
+	    		
+	    			//logger.quiet "--- found descripton element:$element"
+	    			//descriptionText= transformDescriptionElement(element);
+	    		}else{
+	    			logger.quiet "--- found NO descripton element:$element"
+	    		}
+	    		 Element commentsElement = doc.createElement("comments")
+	    		 List<Element> comments = elementDoc.getComment();
+	    		 for (Element element3: comments){
+	    			Node duplicated = doc.importNode(element3,true);
+	    			commentsElement.appendChild(duplicated);
+	    			parentElement.appendChild(commentsElement)
+	    		 }
+	    		 return;
+	    	}catch(RuntimeException e){
+	    		/* ignore */
+	    		logger.quiet "was not able to get description: $e"
+	    	}
+    		
+    	}
+    	if (descriptionText==null || descriptionText.length()==0){
+    		descriptionText= languageElement.getRawCommentText();
+    	}
+    	
+    	
     	if (descriptionText!=null && descriptionText.length() >0 ){
 	    	CDATASection cdata = doc.createCDATASection(descriptionText);
 	    	
@@ -378,7 +409,36 @@ class AssembleEGradleDslDocTask extends AssembleDslDocTask {
     	}
     }
     
-    
+    String transformDescriptionElement(Node element){
+    	/*<para>content</para>*/
+    	if (element==null){
+    		return null
+    	}
+    	if (!element.hasChildNodes()){
+    		return null
+    	}
+    	NodeList nodeList = element.getChildNodes();
+    	StringBuilder sb = new StringBuilder();
+    	for (int i=0;i<nodeList.getLength();i++){
+    		Node node = nodeList.item(i);
+    		String data = node.getNodeValue();
+    		if (data!=null){
+    			sb.append(data);
+    			sb.append("<br><br>\n\n");
+    		}
+    		if  (node.hasChildNodes()){
+    			NodeList nodeList2 = node.getChildNodes();
+    			for (int j=0;j<nodeList2.getLength();j++){
+    				Node node2 = nodeList2.item(j); 
+    				String subText = transformDescriptionElement(node2);
+    				if (subText!=null){
+    					sb.append(subText);
+    				}
+    			}
+    		}
+    	}
+    	return sb.toString();
+    }
 
     def appendPluginsMetaData(DslDocModel model) {
         XIncludeAwareXmlProvider provider = new XIncludeAwareXmlProvider()
