@@ -52,7 +52,9 @@ class AssembleEGradleDslDocTask extends AssembleDslDocTask {
     File linksFile
 
 	String buildGradleVersion
-
+	
+	GenerationListener listener
+	
     @TaskAction
     def transform() {
         XIncludeAwareXmlProvider provider = new XIncludeAwareXmlProvider()
@@ -61,6 +63,13 @@ class AssembleEGradleDslDocTask extends AssembleDslDocTask {
     }
 
     private def transformDocument(XIncludeAwareXmlProvider provider, Document mainDocbookTemplate) {
+        listener = new GenerationListener(){
+        	public void warning(String paramString){};
+
+			public void start(String paramString){};
+
+			public void finish(){};
+        }
         buildGradleVersion = getProject().getRootProject().file("version.txt").text.trim()
         
         ClassMetaDataRepository<ClassMetaData> classRepository = new SimpleClassMetaDataRepository<ClassMetaData>()
@@ -73,10 +82,11 @@ class AssembleEGradleDslDocTask extends AssembleDslDocTask {
 
         // workaround to IBM JDK bug
         def createDslDocModelClosure = this.&createDslDocModel.curry(classDocbookDir, mainDocbookTemplate, classRepository)
-
+		/* FIXME ATR, 21.01.2017 : plugin elements missing, javadoc currently not enhanced, no delegateTo generated*/
         def doc = mainDocbookTemplate
         use(BuildableDOMCategory) {
             DslDocModel model = createDslDocModelClosure(loadPluginsMetaData())
+       		LinkRenderer linkRenderer = new LinkRenderer(doc, model)
             def root = doc.documentElement
             root.section.table.each { Element table ->
                 mergeContent(table, model)
@@ -87,7 +97,7 @@ class AssembleEGradleDslDocTask extends AssembleDslDocTask {
             model.classes.each { ClassDoc classDoc ->
                  //generateDocForType(root.ownerDocument, model, linkRepository, it)
              	 
-             	 createNewDocument(provider, classDoc)
+             	 createNewDocument(provider, classDoc,linkRenderer)
                  String fileName = classDoc.name.replaceAll("\\.","/")
                  File file = new File(destVersionFolder,fileName+".xml")
                  file.parentFile.mkdirs()
@@ -211,7 +221,7 @@ class AssembleEGradleDslDocTask extends AssembleDslDocTask {
     def generateDocForType(Document document, DslDocModel model, ClassMetaDataRepository<ClassLinkMetaData> linkRepository, ClassDoc classDoc) {
         try {
             //classDoc renderer renders the content of the class and also links to properties/methods
-            new ClassDocRenderer(new LinkRenderer(document, model)).mergeContent(classDoc, document.documentElement)
+            new ClassDocRenderer(new LinkRenderer(document, model)).mergeContent(classDoc, doc.documentElement)
             def linkMetaData = linkRepository.get(classDoc.name)
             linkMetaData.style = LinkMetaData.Style.Dsldoc
             classDoc.classMethods.each { methodDoc ->
@@ -227,11 +237,10 @@ class AssembleEGradleDslDocTask extends AssembleDslDocTask {
             throw new DocGenerationException("Failed to generate documentation for class '$classDoc.name'.", e)
         }
     }
-    
     /* ------------------------------------------------------------------------------------- */
     /* -------------------------- Own parts ------------------------------------------------ */
     /* ------------------------------------------------------------------------------------- */
-    def createNewDocument(XIncludeAwareXmlProvider provider, ClassDoc classDoc){
+    def createNewDocument(XIncludeAwareXmlProvider provider, ClassDoc classDoc,LinkRenderer linkRenderer){
 			 provider.emptyDoc()
 			 Document doc = provider.document
 			 
@@ -298,6 +307,33 @@ class AssembleEGradleDslDocTask extends AssembleDslDocTask {
                		 appendDescription(doc,methodElement, methodMetaData)
                		 typeElement.appendChild(methodElement)
                }
+               /* block docs*/
+               for (ClassExtensionDoc extensionDoc : classDoc.getClassExtensions()) {
+		                for (BlockDoc blockDoc : extensionDoc.getExtensionBlocks()) {
+		                    if (blockDoc.isMultiValued()) {
+					            typeElement.appendChild(doc.createTextNode("Each "));
+					            typeElement.appendChild(linkRenderer.link(blockDoc.getType(), listener));
+					            typeElement.appendChild(doc.createTextNode(" in "));
+					            // TODO - add linkRenderer.link(property)
+					            Element link = doc.createElement("link");
+					            link.setAttribute("linkend", blockDoc.getBlockProperty().getId());
+					            literal = doc.createElement("literal");
+					            link.appendChild(literal);
+					            literal.appendChild(doc.createTextNode(blockDoc.getBlockProperty().getName()));
+					        } else {
+					            typeElement.appendChild(linkRenderer.link(blockDoc.getType(), listener));
+					            typeElement.appendChild(doc.createTextNode(" from "));
+					            // TODO - add linkRenderer.link(property)
+					            Element link = doc.createElement("link");
+					            typeElement.appendChild(link);
+					            link.setAttribute("linkend", blockDoc.getBlockProperty().getId());
+					            literal = doc.createElement("literal");
+					            link.appendChild(literal);
+					            literal.appendChild(doc.createTextNode(blockDoc.getBlockProperty().getName()));
+
+       						 }
+		                }
+		             }
                /* plugin meta extensions */
                //for (EGradleClassMetaPluginExtension me: classDoc.metaPluginExtensions){
                //      Element pluginElement = doc.createElement("plugin")
