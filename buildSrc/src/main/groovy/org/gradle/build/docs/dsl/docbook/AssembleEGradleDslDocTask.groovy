@@ -79,7 +79,7 @@ class AssembleEGradleDslDocTask extends AssembleDslDocTask {
         classRepository.each {name, ClassMetaData metaData ->
             linkRepository.put(name, new ClassLinkMetaData(metaData))
         }
-
+		
         // workaround to IBM JDK bug
         def createDslDocModelClosure = this.&createDslDocModel.curry(classDocbookDir, mainDocbookTemplate, classRepository)
 		/* FIXME ATR, 21.01.2017 : plugin elements missing, javadoc currently not enhanced, no delegateTo generated*/
@@ -294,12 +294,15 @@ class AssembleEGradleDslDocTask extends AssembleDslDocTask {
                 for (MethodMetaData methodMetaData: classMetaData.declaredMethods){
                		 logger.debug "method $methodMetaData.name"
                		 Element methodElement = doc.createElement("method")
+               		 
+               		 methodElement.setAttribute("signature", methodMetaData.getSignature())
                		 methodElement.setAttribute("name", methodMetaData.name)
                		 TypeMetaData returnType = methodMetaData.returnType
                		 methodElement.setAttribute("returnType", returnType.name)
                		 
                		 for (ParameterMetaData paramMetaData: methodMetaData.parameters){
                		 	  Element paramElement = doc.createElement("parameter")
+               		 	  paramElement.setAttribute("signature", paramMetaData.getSignature())
                		 	  paramElement.setAttribute("name",paramMetaData.name)
                		 	  paramElement.setAttribute("type", paramMetaData.type.name)
                		 	  
@@ -330,22 +333,22 @@ class AssembleEGradleDslDocTask extends AssembleDslDocTask {
    					}
 		        }
                /* plugin meta extensions */
-               //for (EGradleClassMetaPluginExtension me: classDoc.metaPluginExtensions){
-               //      Element pluginElement = doc.createElement("plugin")
-               //		 pluginElement.setAttribute("id", me.pluginId)
-               //      if (me.mixinClass){
-               //      	  Element mixinElement = doc.createElement("mixin")
-               //		      mixinElement.setAttribute("class", me.mixinClass)
-               //		      pluginElement.appendChild(mixinElement)
-               //      }
-               //      if (me.extensionId){
-               //       	  Element extensionElement = doc.createElement("extension")
-               //		      extensionElement.setAttribute("id", me.extensionId)
-               //		      extensionElement.setAttribute("class", me.extensionClass)
-               //		      pluginElement.appendChild(extensionElement)
-               //      }
-               //		 typeElement.appendChild(pluginElement)
-               //}
+               for (ClassExtensionMetaData me: classMetaData.metaPluginExtensions){
+                     Element pluginElement = doc.createElement("plugin")
+               		 pluginElement.setAttribute("id", me.pluginId)
+                     if (me.mixinClass){
+                     	  Element mixinElement = doc.createElement("mixin")
+               		      mixinElement.setAttribute("class", me.mixinClass)
+               		      pluginElement.appendChild(mixinElement)
+                     }
+                     if (me.extensionId){
+                      	  Element extensionElement = doc.createElement("extension")
+               		      extensionElement.setAttribute("id", me.extensionId)
+               		      extensionElement.setAttribute("class", me.extensionClass)
+               		      pluginElement.appendChild(extensionElement)
+                     }
+               		 typeElement.appendChild(pluginElement)
+               }
                
                
 	}

@@ -121,9 +121,7 @@ class EGradleAssembleDslTask extends DefaultTask {
                }
                def superClassMetaData = classMetaData.superClass
                if (superClassMetaData){
-                	Element superClassElement = doc.createElement("superClass")
-               		superClassElement.setAttribute("name",superClassMetaData.className)
-               		typeElement.appendChild(superClassElement)
+               		typeElement.setAttribute("superType",superClassMetaData.className)
                }
                if (classMetaData.interface){
                	 	typeElement.setAttribute("interface", "true")
