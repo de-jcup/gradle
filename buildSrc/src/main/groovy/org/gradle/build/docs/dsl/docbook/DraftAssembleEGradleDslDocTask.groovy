@@ -31,8 +31,10 @@ import org.w3c.dom.*
  * 
  * The task will generate egradle xml files for DSL code completion.
  * So javadoc and block data is available in generation
+ *
+ * Renamed to Draft
  */
-class AssembleEGradleDslDocTask extends AssembleDslDocTask {
+class DraftAssembleEGradleDslDocTask extends AssembleDslDocTask {
     @InputFile
     File sourceFile
     

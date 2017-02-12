@@ -229,7 +229,7 @@ task dslDocbook(type: AssembleDslDocTask, dependsOn: [dslMetaData]) {
     linksFile = new File(docbookSrc, 'api-links.bin')
 }
 
-task dslEGradle2(type: AssembleEGradleDslDocTask, dependsOn: [dslMetaData]) {
+task dslEGradle2(type: DraftAssembleEGradleDslDocTask, dependsOn: [dslMetaData]) {
     inputs.files fileTree(dir: dslSrcDir, includes: ['*.xml'])
     sourceFile = new File(dslSrcDir, 'dsl.xml')
     classMetaDataFile = dslMetaData.destFile
