@@ -22,7 +22,7 @@ import org.gradle.build.docs.Docbook2Xhtml
 import org.gradle.build.docs.dsl.egradle.EGradleAssembleDslTask
 import org.gradle.build.docs.dsl.source.GenerateDefaultImportsTask
 import org.gradle.build.docs.dsl.docbook.AssembleDslDocTask
-import org.gradle.build.docs.dsl.docbook.AssembleEGradleDslDocTask
+import org.gradle.build.docs.dsl.docbook.DraftAssembleEGradleDslDocTask
 import org.gradle.build.docs.dsl.source.ExtractDslMetaDataTask
 import org.gradle.build.docs.releasenotes.*
 import org.gradle.build.docs.releasenotes.checks.*

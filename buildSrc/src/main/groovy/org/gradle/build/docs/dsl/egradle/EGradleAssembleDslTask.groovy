@@ -134,6 +134,14 @@ class EGradleAssembleDslTask extends DefaultTask {
                if (classMetaData.enum){
                	 	typeElement.setAttribute("enum", "true")
                }
+               List<String> interfaceNames = classMetaData.getInterfaceNames();
+               if (! interfaceNames.isEmpty()){ 
+               		for (String interfaceName: interfaceNames){ 
+               		 Element interfaceElement = doc.createElement("interface")
+               		 interfaceElement.setAttribute("name", interfaceName)
+               		 typeElement.appendChild(interfaceElement)
+               		}
+               }
                /* properties*/
                for (PropertyMetaData propertyMetaData: classMetaData.declaredProperties){
                		 logger.debug "property $propertyMetaData.name"
