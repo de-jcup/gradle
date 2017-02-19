@@ -87,8 +87,8 @@ class EGradleAssembleDslTask extends DefaultTask {
             appendPluginsMetaData(model)
            
             File destVersionFolder=new File(destFolder,buildGradleVersion);
-           
-             model.classes.each { EGradleClassDoc classDoc ->
+            /* delegateTarget resolving, inspired by ClassDocMethodsBuilder */
+            model.classes.each { EGradleClassDoc classDoc ->
              	 createNewDocument(provider, classDoc)
                  String fileName = classDoc.name.replaceAll("\\.","/")
                  File file = new File(destVersionFolder,fileName+".xml")
@@ -99,7 +99,7 @@ class EGradleAssembleDslTask extends DefaultTask {
 
         // linkRepository.store(linksFile)
     }
-
+    
 	def createNewDocument(EGradleXIncludeAwareXmlProvider provider, EGradleClassDoc classDoc){
 			 provider.emptyDoc()
 			 Document doc = provider.document
@@ -134,6 +134,7 @@ class EGradleAssembleDslTask extends DefaultTask {
                if (classMetaData.enum){
                	 	typeElement.setAttribute("enum", "true")
                }
+               
                List<String> interfaceNames = classMetaData.getInterfaceNames();
                if (! interfaceNames.isEmpty()){ 
                		for (String interfaceName: interfaceNames){ 
@@ -142,6 +143,10 @@ class EGradleAssembleDslTask extends DefaultTask {
                		 typeElement.appendChild(interfaceElement)
                		}
                }
+               
+               // info: gradle dsl documentation, generateds script block information by using ClassDocMethodsBuilder!
+               // here you can find information how BlockDoc is build, which is used to identify a "Delegates to"...
+               
                /* properties*/
                for (PropertyMetaData propertyMetaData: classMetaData.declaredProperties){
                		 logger.debug "property $propertyMetaData.name"
@@ -169,6 +174,12 @@ class EGradleAssembleDslTask extends DefaultTask {
                		 	  
                		 	  methodElement.appendChild(paramElement)
                		 }
+               		 
+               		 String delegateTarget = calculateDelegateTarget(classMetaData, methodMetaData)
+               		 if (delegateTarget!=null){ 
+               		 	 methodElement.setAttribute("delegationTarget", delegateTarget)
+               		 }
+               		 
                		 appendDescription(doc,methodElement, methodMetaData)
                		 typeElement.appendChild(methodElement)
                }
@@ -192,6 +203,41 @@ class EGradleAssembleDslTask extends DefaultTask {
                logger.debug "append to root element: $typeElement"
                appendDescription(doc,typeElement, classMetaData)
                
+	}
+	
+	String calculateDelegateTarget(ClassMetaData metaData, MethodMetaData methodMetaData){ 
+     	if (methodMetaData.getParameters().size() != 1){ 
+     		return;
+     	} 
+     	String signature = methodMetaData.getParameters().get(0).getType().getSignature();
+     	if (! signature.equals(Closure.class.getName())){ 
+     		return;
+     	}
+     	
+     	/* closure */
+     	String methodName = methodMetaData.getName()
+     	Set<PropertyMetaData> metaProperties = metaData.getDeclaredProperties()
+     	/* scan for property with same name - the property contains the delegation target type!*/
+     	for (PropertyMetaData propertyMetaData: metaProperties){ 
+     		String propertyName = propertyMetaData.getName()
+     		if(propertyName.equals(methodName)){ 
+     			/* Found*/
+     			TypeMetaData type = propertyMetaData.getType()
+     			String typeName = type.getName();
+     			boolean useGeneric = false;
+     			useGeneric=useGeneric| typeName.equals("java.util.List");
+     			useGeneric=useGeneric| typeName.equals("java.util.Collection");
+     			useGeneric=useGeneric| typeName.equals("java.util.Set");
+     			useGeneric=useGeneric| typeName.equals("java.util.Iterable");
+
+				if (useGeneric){ 
+					type = type.getTypeArgs().get(0);
+					typeName = type.getName();
+				}                 			
+     			return typeName;
+     		}
+     	}
+     	return null;
 	}
 
     @CompileStatic
