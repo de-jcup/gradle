@@ -216,7 +216,7 @@ class EGradleAssembleDslTask extends DefaultTask {
      	
      	/* closure */
      	String methodName = methodMetaData.getName()
-     	Set<PropertyMetaData> metaProperties = metaData.getDeclaredProperties()
+     	Set<PropertyMetaData> metaProperties = getProperties(metaData)
      	/* scan for property with same name - the property contains the delegation target type!*/
      	for (PropertyMetaData propertyMetaData: metaProperties){ 
      		String propertyName = propertyMetaData.getName()
@@ -240,6 +240,19 @@ class EGradleAssembleDslTask extends DefaultTask {
      	return null;
 	}
 
+   /**
+	* Get all properites not only declared ones
+	*/
+	public Set<PropertyMetaData> getProperties(ClassMetaData metaData) {
+		Set<PropertyMetaData> allProperties = new HashSet<>();
+		ClassMetaData m = metaData;
+		while (m!=null){ 
+			allProperties.addAll(m.getDeclaredProperties())
+			m= m.getSuperClass()
+		}		
+        return allProperties;
+    }
+
     @CompileStatic
     EGradleDslDocModel createEGradleDslDocModel(ClassMetaDataRepository<ClassMetaData> classMetaDataRepository) {
         new EGradleDslDocModel(classMetaDataRepository)
@@ -256,8 +269,6 @@ class EGradleAssembleDslTask extends DefaultTask {
 	    	parentElement.appendChild(descriptionElement)
     	}
     }
-    
-    
 
     def appendPluginsMetaData(EGradleDslDocModel model) {
         XIncludeAwareXmlProvider provider = new XIncludeAwareXmlProvider()
