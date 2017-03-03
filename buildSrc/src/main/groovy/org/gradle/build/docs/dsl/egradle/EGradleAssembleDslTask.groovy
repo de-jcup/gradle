@@ -209,10 +209,13 @@ class EGradleAssembleDslTask extends DefaultTask {
      	if (methodMetaData.getParameters().size() != 1){ 
      		return;
      	} 
-     	String signature = methodMetaData.getParameters().get(0).getType().getSignature();
+     	ParameterMetaData paramMetaData=methodMetaData.getParameters().get(0);
+     	TypeMetaData paramTypeMetaData = paramMetaData.getType();
+     	String signature = paramTypeMetaData.getSignature();
      	if (! signature.equals(Closure.class.getName())){ 
      		return;
      	}
+     	/* ------ signature is of single param type with closure ------ */
      	
      	/* closure */
      	String methodName = methodMetaData.getName()
@@ -237,6 +240,10 @@ class EGradleAssembleDslTask extends DefaultTask {
      			return typeName;
      		}
      	}
+     	
+     	/* not found, so try to resolve by @DelegatesTo annotation.
+     	 * see CopyProcessingSpec eachFile(groovy.lang.Closure) as an example
+     	*/
      	return null;
 	}
 
