@@ -24,6 +24,7 @@ import org.gradle.build.docs.dsl.source.GenerateDefaultImportsTask
 import org.gradle.build.docs.dsl.docbook.AssembleDslDocTask
 import org.gradle.build.docs.dsl.docbook.DraftAssembleEGradleDslDocTask
 import org.gradle.build.docs.dsl.source.ExtractDslMetaDataTask
+import org.gradle.build.docs.dsl.source.EGradleExtractDslMetaDataTask
 import org.gradle.build.docs.releasenotes.*
 import org.gradle.build.docs.releasenotes.checks.*
 import org.apache.tools.ant.filters.ReplaceTokens
@@ -220,6 +221,7 @@ task dslMetaData(type: ExtractDslMetaDataTask) {
     destFile = new File(docbookSrc, 'dsl-meta-data.bin')
 }
 
+
 task dslDocbook(type: AssembleDslDocTask, dependsOn: [dslMetaData]) {
     inputs.files fileTree(dir: dslSrcDir, includes: ['*.xml'])
     sourceFile = new File(dslSrcDir, 'dsl.xml')
@@ -229,24 +231,59 @@ task dslDocbook(type: AssembleDslDocTask, dependsOn: [dslMetaData]) {
     linksFile = new File(docbookSrc, 'api-links.bin')
 }
 
-task dslEGradle2(type: DraftAssembleEGradleDslDocTask, dependsOn: [dslMetaData]) {
-    inputs.files fileTree(dir: dslSrcDir, includes: ['*.xml'])
-    sourceFile = new File(dslSrcDir, 'dsl.xml')
-    classMetaDataFile = dslMetaData.destFile
-    pluginsMetaDataFile = new File(dslSrcDir, 'plugins.xml')
-    destFolder = new File(egradleSrc2,'egradle2-dsl')
-    destFile = new File(egradleSrc2, 'egradle2-dsl-unused-but-necessary-because-of-extend.xml')
-    linksFile = new File(egradleSrc2, 'egradle2-api-links.bin')
+//task dslEGradle2(type: DraftAssembleEGradleDslDocTask, dependsOn: [dslMetaData]) {
+//    inputs.files fileTree(dir: dslSrcDir, includes: ['*.xml'])
+//    sourceFile = new File(dslSrcDir, 'dsl.xml')
+//    classMetaDataFile = dslMetaData.destFile
+//    pluginsMetaDataFile = new File(dslSrcDir, 'plugins.xml')
+//    destFolder = new File(egradleSrc2,'egradle2-dsl')
+//    destFile = new File(egradleSrc2, 'egradle2-dsl-unused-but-necessary-because-of-extend.xml')
+//    linksFile = new File(egradleSrc2, 'egradle2-api-links.bin')
+//}
+
+task eGradleFetchSources(type: SourceTask){ 
+	source publicGroovyProjects.collect {project -> project.sourceSets.main.allJava }
+   
+ 	include 'org/gradle/*'
+    include 'org/gradle/api/**'
+    include 'org/gradle/authentication/**'
+    include 'org/gradle/buildinit/**'
+    include 'org/gradle/external/javadoc/**'
+    include 'org/gradle/ide/**'
+    include 'org/gradle/ivy/**'
+    include 'org/gradle/jvm/**'
+    include 'org/gradle/language/**'
+    include 'org/gradle/maven/**'
+    include 'org/gradle/nativeplatform/**'
+    include 'org/gradle/platform/**'
+    include 'org/gradle/play/**'
+    include 'org/gradle/plugin/devel/**'
+    include 'org/gradle/plugin/repository/*'
+    include 'org/gradle/plugin/use/*'
+    include 'org/gradle/plugins/**'
+    include 'org/gradle/process/**'
+    include 'org/gradle/testfixtures/**'
+    include 'org/gradle/testing/jacoco/**'
+    include 'org/gradle/tooling/**'
+    include 'org/gradle/model/**'
+    include 'org/gradle/testkit/**'
+    include 'org/gradle/testing/**'
+    include 'org/gradle/api/internal/**'//AbstractTask.java'
 }
 
-task dslEGradle(type: EGradleAssembleDslTask, dependsOn: [dslMetaData]) {
+task eGradleDslMetaData(type: EGradleExtractDslMetaDataTask, dependsOn: [eGradleFetchSources]) {
+    source { eGradleFetchSources.source }
+    destFile = new File(docbookSrc, 'egradle-dsl-meta-data.bin')
+}
+
+task dslEGradle(type: EGradleAssembleDslTask, dependsOn: [eGradleDslMetaData]) {
     sources = fileTree(dir: dslSrcDir, includes: ['*.xml'])
     
     //sourceFile = new File(dslSrcDir, 'dsl.xml')
-    classMetaDataFile = dslMetaData.destFile
+    classMetaDataFile = eGradleDslMetaData.destFile
     pluginsMetaDataFile = new File(dslSrcDir, 'plugins.xml')
     destFolder = new File(egradleSrc,'egradle-dsl')
-    linksFile = new File(egradleSrc,, 'api-links.bin')
+    linksFile = new File(egradleSrc, 'api-links.bin')
 }
 
 task dslStandaloneDocbook(type: UserGuideTransformTask, dependsOn: [dslDocbook]) {
