@@ -90,6 +90,9 @@ public class EGradleSimpleClassMetaDataRepository<T extends Attachable<T>> imple
     }
 
     public void put(String fullyQualifiedClassName, T metaData) {
+        if (fullyQualifiedClassName.equals("org.gradle.api.internal.AbstractTask")){
+            System.out.println(getClass().getSimpleName()+":Abstract task adding with metadata:"+metaData);
+        }
         classes.put(fullyQualifiedClassName, metaData);
     }
 

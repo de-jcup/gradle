@@ -113,6 +113,9 @@ public class EGradleSourceMetaDataVisitor extends VisitorAdapter {
             classStack.addFirst(currentClass);
             allClasses.add(currentClass);
             typeTokens.put(t, currentClass);
+            if (className.indexOf("AbstractTask")!=-1){
+                System.out.println(getClass().getSimpleName()+": visitTypeDef "+className);
+            }
             repository.put(className, currentClass);
         }
     }
@@ -170,6 +173,12 @@ public class EGradleSourceMetaDataVisitor extends VisitorAdapter {
         String name = extractName(t);
         if (!groovy && name.equals(getCurrentClass().getSimpleName())) {
             // A constructor. The java grammar treats a constructor as a method, the groovy grammar does not.
+            return;
+        }
+        int modifier = extractModifiers(t);
+        boolean isPublic = (modifier & Modifier.PUBLIC)==0; 
+        if (isPublic){
+            /* not public, so ignore */
             return;
         }
 
@@ -463,6 +472,10 @@ public class EGradleSourceMetaDataVisitor extends VisitorAdapter {
 
     private String extractIdent(GroovySourceAST t) {
         return t.childOfType(IDENT).getText();
+    }
+    
+    private String extractModifier(GroovySourceAST t) {
+        return t.childOfType(MODIFIERS).getText();
     }
 
     private String extractName(GroovySourceAST t) {

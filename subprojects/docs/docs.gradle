@@ -268,7 +268,9 @@ task eGradleFetchSources(type: SourceTask){
     include 'org/gradle/model/**'
     include 'org/gradle/testkit/**'
     include 'org/gradle/testing/**'
-    include 'org/gradle/api/internal/**'//AbstractTask.java'
+//    include '**/internal/**'
+//    exclude '**/internal/**'
+//    include 'org/gradle/api/internal/**'
 }
 
 task eGradleDslMetaData(type: EGradleExtractDslMetaDataTask, dependsOn: [eGradleFetchSources]) {

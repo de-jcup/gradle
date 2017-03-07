@@ -34,10 +34,10 @@ import org.gradle.api.tasks.TaskAction
 import org.gradle.build.docs.dsl.source.model.ClassMetaData
 import org.gradle.build.docs.dsl.source.model.TypeMetaData
 import org.gradle.build.docs.model.ClassMetaDataRepository
-import org.gradle.build.docs.model.SimpleClassMetaDataRepository
 import org.gradle.util.Clock
 import org.gradle.build.docs.DocGenerationException
 import org.gradle.api.Transformer
+import org.gradle.build.docs.dsl.egradle.*
 
 /**
  * Extracts meta-data from the Groovy and Java source files which make up the Gradle API. Persists the meta-data to a file
@@ -53,7 +53,7 @@ class EGradleExtractDslMetaDataTask extends SourceTask {
 
         //parsing all input files into metadata
         //and placing them in the repository object
-        SimpleClassMetaDataRepository<ClassMetaData> repository = new SimpleClassMetaDataRepository<ClassMetaData>()
+        EGradleSimpleClassMetaDataRepository<ClassMetaData> repository = new EGradleSimpleClassMetaDataRepository<ClassMetaData>()
         int counter = 0
         source.each { File f ->
             parse(f, repository)
@@ -72,6 +72,9 @@ class EGradleExtractDslMetaDataTask extends SourceTask {
     }
 
     def parse(File sourceFile, ClassMetaDataRepository<ClassMetaData> repository) {
+        if (sourceFile.name.indexOf("AbstractTask.java")!=-1){ 
+            getLogger().warn(">>>>>>>>parsing: abstract task file:"+sourceFile);
+        }
         try {
             sourceFile.withReader { reader ->
                 if (sourceFile.name.endsWith('.java')) {
@@ -81,8 +84,8 @@ class EGradleExtractDslMetaDataTask extends SourceTask {
                 }
             }
         } catch (Exception e) {
-            Exception x= new DocGenerationException("Could not parse '$sourceFile'.", e)
-            getLogger().warn("Ups:",x);
+//            Exception x= new DocGenerationException("Could not parse '$sourceFile'.", e)
+            getLogger().warn("Could not parse '$sourceFile'. Reason:"+e.getMessage());
         }
     }
 
@@ -103,6 +106,9 @@ class EGradleExtractDslMetaDataTask extends SourceTask {
         AntlrASTProcessor java2groovyTraverser = new PreOrderTraversal(java2groovyConverter);
         java2groovyTraverser.process(ast);
 
+        if (sourceFile.name.indexOf("AbstractTask.java")!=-1){ 
+            getLogger().warn(">>>>>>>>parsing java: abstract task file:"+sourceFile);
+        }
         def visitor = new EGradleSourceMetaDataVisitor(sourceBuffer, repository, false)
         AntlrASTProcessor traverser = new SourceCodeTraversal(visitor);
         traverser.process(ast);

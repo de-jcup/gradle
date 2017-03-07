@@ -34,6 +34,10 @@ class EGradleDslDocModel {
 
 	private initClasses(){
 		for (String clazzName: classMetaDataRepository.getKeys()){
+		       if (clazzName.indexOf("AbstractTask")!=-1){ 
+                    System.out.println(">>>>>>>>EGradleDslDocModel: init clazz:"+clazzName);
+               }
+		
 			ClassMetaData metaData = classMetaDataRepository.get(clazzName);
 			EGradleClassDoc classDoc = new EGradleClassDoc(clazzName, metaData);
 			classes[clazzName]=classDoc
@@ -45,7 +49,27 @@ class EGradleDslDocModel {
     }
 
  	Collection<EGradleClassDoc> getClasses() {
-        return classes.values().findAll { !it.name.contains('.internal.') }
+        return classes.values().findAll { isAllowed(it.name) }
+    }
+    
+    /* ATR, 07.03.2017 */
+    private boolean isAllowed(String name){ 
+        if (name.indexOf('.internal.')==-1){ 
+            return true;
+        }
+        int apiInternalIndex = name.indexOf('org.gradle.api.internal.'); 
+        if (apiInternalIndex ==-1){ 
+//            System.out.println("skipping:"+name)
+            return false;
+            // we do only need internal api parts to get full inheritage for SDK
+        }
+        int count = name.length() - name.replace(".", "").length();
+        if (count>4){
+            /* currently we are only interested in "org.gradle.api.internal.$xyz" but not in"org.gradle.api.internal.deeper.$xyz" */
+            return false
+        }
+        System.out.println("+++++++++++++++ allowing internal part:"+name)
+        return true;
     }
     
     EGradleClassDoc getClassDoc(String className) {
