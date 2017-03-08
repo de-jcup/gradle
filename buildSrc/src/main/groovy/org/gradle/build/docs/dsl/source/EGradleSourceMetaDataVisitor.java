@@ -77,6 +77,8 @@ public class EGradleSourceMetaDataVisitor extends VisitorAdapter {
         }
     }
 
+    private boolean isCurrentlyInsideInterface;
+    
     @Override
     public void visitClassDef(GroovySourceAST t, int visit) {
         visitTypeDef(t, visit, MetaType.CLASS);
@@ -98,6 +100,7 @@ public class EGradleSourceMetaDataVisitor extends VisitorAdapter {
     }
 
     private void visitTypeDef(GroovySourceAST t, int visit, ClassMetaData.MetaType metaType) {
+        isCurrentlyInsideInterface=metaType == ClassMetaData.MetaType.INTERFACE;
         if (visit == OPENING_VISIT) {
             ClassMetaData outerClass = getCurrentClass();
             String baseName = extractIdent(t);
@@ -176,10 +179,14 @@ public class EGradleSourceMetaDataVisitor extends VisitorAdapter {
             return;
         }
         int modifier = extractModifiers(t);
-        boolean isPublic = (modifier & Modifier.PUBLIC)==0; 
-        if (isPublic){
-            /* not public, so ignore */
-            return;
+        boolean isNotPublic = (modifier & Modifier.PUBLIC)==0; 
+        if (!groovy){
+            if (!isCurrentlyInsideInterface){
+                if (isNotPublic){
+                    /* not public, not in interface and not groovy... so ignore */
+                    return;
+                }
+            }
         }
 
         ASTIterator children = new ASTIterator(t);

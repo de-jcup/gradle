@@ -34,15 +34,9 @@ public class EGradleSimpleClassMetaDataRepository<T extends Attachable<T>> imple
     
     @SuppressWarnings("unchecked")
     public void load(File repoFile) {
-        try {
-            FileInputStream inputStream = new FileInputStream(repoFile);
-            try {
-                ObjectInputStream objInputStream = new ObjectInputStream(new BufferedInputStream(inputStream));
+        try(FileInputStream inputStream = new FileInputStream(repoFile); ObjectInputStream objInputStream = new ObjectInputStream(new BufferedInputStream(inputStream))) {
                 classes.clear();
                 classes.putAll((Map<String, T>) objInputStream.readObject());
-            } finally {
-                inputStream.close();
-            }
         } catch (Exception e) {
             throw new GradleException(String.format("Could not load meta-data from %s.", repoFile), e);
         }
