@@ -48,7 +48,7 @@ public class EGradleSourceMetaDataVisitor extends VisitorAdapter {
     private LineColumn lastLineCol;
 
     EGradleSourceMetaDataVisitor(SourceBuffer sourceBuffer, ClassMetaDataRepository<ClassMetaData> repository,
-                          boolean isGroovy) {
+            boolean isGroovy) {
         this.sourceBuffer = sourceBuffer;
         this.repository = repository;
         groovy = isGroovy;
@@ -77,8 +77,6 @@ public class EGradleSourceMetaDataVisitor extends VisitorAdapter {
         }
     }
 
-    private boolean isCurrentlyInsideInterface;
-    
     @Override
     public void visitClassDef(GroovySourceAST t, int visit) {
         visitTypeDef(t, visit, MetaType.CLASS);
@@ -100,7 +98,7 @@ public class EGradleSourceMetaDataVisitor extends VisitorAdapter {
     }
 
     private void visitTypeDef(GroovySourceAST t, int visit, ClassMetaData.MetaType metaType) {
-        isCurrentlyInsideInterface=metaType == ClassMetaData.MetaType.INTERFACE;
+       
         if (visit == OPENING_VISIT) {
             ClassMetaData outerClass = getCurrentClass();
             String baseName = extractIdent(t);
@@ -116,8 +114,8 @@ public class EGradleSourceMetaDataVisitor extends VisitorAdapter {
             classStack.addFirst(currentClass);
             allClasses.add(currentClass);
             typeTokens.put(t, currentClass);
-            if (className.indexOf("AbstractTask")!=-1){
-                System.out.println(getClass().getSimpleName()+": visitTypeDef "+className);
+            if (className.indexOf("AbstractTask") != -1) {
+                System.out.println(getClass().getSimpleName() + ": visitTypeDef " + className);
             }
             repository.put(className, currentClass);
         }
@@ -131,9 +129,8 @@ public class EGradleSourceMetaDataVisitor extends VisitorAdapter {
     public void visitExtendsClause(GroovySourceAST t, int visit) {
         if (visit == OPENING_VISIT) {
             ClassMetaData currentClass = getCurrentClass();
-            for (
-                    GroovySourceAST child = (GroovySourceAST) t.getFirstChild(); child != null;
-                    child = (GroovySourceAST) child.getNextSibling()) {
+            for (GroovySourceAST child = (GroovySourceAST) t
+                    .getFirstChild(); child != null; child = (GroovySourceAST) child.getNextSibling()) {
                 if (!currentClass.isInterface()) {
                     currentClass.setSuperClassName(extractName(child));
                 } else {
@@ -147,9 +144,8 @@ public class EGradleSourceMetaDataVisitor extends VisitorAdapter {
     public void visitImplementsClause(GroovySourceAST t, int visit) {
         if (visit == OPENING_VISIT) {
             ClassMetaData currentClass = getCurrentClass();
-            for (
-                    GroovySourceAST child = (GroovySourceAST) t.getFirstChild(); child != null;
-                    child = (GroovySourceAST) child.getNextSibling()) {
+            for (GroovySourceAST child = (GroovySourceAST) t
+                    .getFirstChild(); child != null; child = (GroovySourceAST) child.getNextSibling()) {
                 currentClass.addInterfaceName(extractName(child));
             }
         }
@@ -175,15 +171,18 @@ public class EGradleSourceMetaDataVisitor extends VisitorAdapter {
     private void maybeAddMethod(GroovySourceAST t) {
         String name = extractName(t);
         if (!groovy && name.equals(getCurrentClass().getSimpleName())) {
-            // A constructor. The java grammar treats a constructor as a method, the groovy grammar does not.
+            // A constructor. The java grammar treats a constructor as a method,
+            // the groovy grammar does not.
             return;
         }
         int modifier = extractModifiers(t);
-        boolean isNotPublic = (modifier & Modifier.PUBLIC)==0; 
-        if (!groovy){
-            if (!isCurrentlyInsideInterface){
-                if (isNotPublic){
-                    /* not public, not in interface and not groovy... so ignore */
+        boolean isNotPublic = (modifier & Modifier.PUBLIC) == 0;
+        if (!groovy) {
+            if (!getCurrentClass().isInterface()) {
+                if (isNotPublic) {
+                    /*
+                     * not public, not in interface and not groovy... so ignore
+                     */
                     return;
                 }
             }
@@ -209,7 +208,8 @@ public class EGradleSourceMetaDataVisitor extends VisitorAdapter {
         if (matcher.matches()) {
             int startName = matcher.start(2);
             String propName = name.substring(startName, startName + 1).toLowerCase() + name.substring(startName + 1);
-            PropertyMetaData property = getCurrentClass().addReadableProperty(propName, returnType, rawCommentText, method);
+            PropertyMetaData property = getCurrentClass().addReadableProperty(propName, returnType, rawCommentText,
+                    method);
             for (String annotation : method.getAnnotationTypeNames()) {
                 property.addAnnotationTypeName(annotation);
             }
@@ -230,9 +230,8 @@ public class EGradleSourceMetaDataVisitor extends VisitorAdapter {
 
     private void extractParameters(GroovySourceAST t, MethodMetaData method) {
         GroovySourceAST paramsAst = t.childOfType(PARAMETERS);
-        for (
-                GroovySourceAST child = (GroovySourceAST) paramsAst.getFirstChild(); child != null;
-                child = (GroovySourceAST) child.getNextSibling()) {
+        for (GroovySourceAST child = (GroovySourceAST) paramsAst
+                .getFirstChild(); child != null; child = (GroovySourceAST) child.getNextSibling()) {
             assert child.getType() == PARAMETER_DEF || child.getType() == VARIABLE_PARAMETER_DEF;
             TypeMetaData type = extractTypeName((GroovySourceAST) child.getFirstChild().getNextSibling());
             if (child.getType() == VARIABLE_PARAMETER_DEF) {
@@ -258,7 +257,8 @@ public class EGradleSourceMetaDataVisitor extends VisitorAdapter {
         }
 
         int modifiers = extractModifiers(t);
-        boolean isConst = getCurrentClass().isInterface() || (Modifier.isStatic(modifiers) && Modifier.isFinal(modifiers));
+        boolean isConst = getCurrentClass().isInterface()
+                || (Modifier.isStatic(modifiers) && Modifier.isFinal(modifiers));
         if (isConst) {
             visitConst(t);
             return;
@@ -277,15 +277,17 @@ public class EGradleSourceMetaDataVisitor extends VisitorAdapter {
         TypeMetaData propertyType = extractTypeName(children.current);
         ClassMetaData currentClass = getCurrentClass();
 
-        MethodMetaData getterMethod = currentClass.addMethod(String.format("get%s", StringUtils.capitalize(
-                propertyName)), propertyType, "");
-        PropertyMetaData property = currentClass.addReadableProperty(propertyName, propertyType, getJavaDocCommentsBeforeNode(t), getterMethod);
+        MethodMetaData getterMethod = currentClass
+                .addMethod(String.format("get%s", StringUtils.capitalize(propertyName)), propertyType, "");
+        PropertyMetaData property = currentClass.addReadableProperty(propertyName, propertyType,
+                getJavaDocCommentsBeforeNode(t), getterMethod);
         findAnnotations(t, property);
         if (!Modifier.isFinal(modifiers)) {
-            MethodMetaData setterMethod = currentClass.addMethod(String.format("set%s", StringUtils.capitalize(
-                    propertyName)), TypeMetaData.VOID, "");
+            MethodMetaData setterMethod = currentClass
+                    .addMethod(String.format("set%s", StringUtils.capitalize(propertyName)), TypeMetaData.VOID, "");
             setterMethod.addParameter(propertyName, propertyType);
-            currentClass.addWriteableProperty(propertyName, propertyType, getJavaDocCommentsBeforeNode(t), setterMethod);
+            currentClass.addWriteableProperty(propertyName, propertyType, getJavaDocCommentsBeforeNode(t),
+                    setterMethod);
         }
     }
 
@@ -301,17 +303,17 @@ public class EGradleSourceMetaDataVisitor extends VisitorAdapter {
 
     private String extractLiteral(AST ast) {
         switch (ast.getType()) {
-            case EXPR:
-                // The java grammar wraps initialisers in an EXPR token
-                return extractLiteral(ast.getFirstChild());
-            case NUM_INT:
-            case NUM_LONG:
-            case NUM_FLOAT:
-            case NUM_DOUBLE:
-            case NUM_BIG_INT:
-            case NUM_BIG_DECIMAL:
-            case STRING_LITERAL:
-                return ast.getText();
+        case EXPR:
+            // The java grammar wraps initialisers in an EXPR token
+            return extractLiteral(ast.getFirstChild());
+        case NUM_INT:
+        case NUM_LONG:
+        case NUM_FLOAT:
+        case NUM_DOUBLE:
+        case NUM_BIG_INT:
+        case NUM_BIG_DECIMAL:
+        case STRING_LITERAL:
+            return ast.getText();
         }
         return null;
     }
@@ -347,25 +349,24 @@ public class EGradleSourceMetaDataVisitor extends VisitorAdapter {
             return 0;
         }
         int modifierFlags = 0;
-        for (
-                GroovySourceAST child = (GroovySourceAST) modifiers.getFirstChild(); child != null;
-                child = (GroovySourceAST) child.getNextSibling()) {
+        for (GroovySourceAST child = (GroovySourceAST) modifiers
+                .getFirstChild(); child != null; child = (GroovySourceAST) child.getNextSibling()) {
             switch (child.getType()) {
-                case LITERAL_private:
-                    modifierFlags |= Modifier.PRIVATE;
-                    break;
-                case LITERAL_protected:
-                    modifierFlags |= Modifier.PROTECTED;
-                    break;
-                case LITERAL_public:
-                    modifierFlags |= Modifier.PUBLIC;
-                    break;
-                case FINAL:
-                    modifierFlags |= Modifier.FINAL;
-                    break;
-                case LITERAL_static:
-                    modifierFlags |= Modifier.STATIC;
-                    break;
+            case LITERAL_private:
+                modifierFlags |= Modifier.PRIVATE;
+                break;
+            case LITERAL_protected:
+                modifierFlags |= Modifier.PROTECTED;
+                break;
+            case LITERAL_public:
+                modifierFlags |= Modifier.PUBLIC;
+                break;
+            case FINAL:
+                modifierFlags |= Modifier.FINAL;
+                break;
+            case LITERAL_static:
+                modifierFlags |= Modifier.STATIC;
+                break;
             }
         }
         return modifierFlags;
@@ -374,27 +375,28 @@ public class EGradleSourceMetaDataVisitor extends VisitorAdapter {
     private TypeMetaData extractTypeName(GroovySourceAST ast) {
         TypeMetaData type = new TypeMetaData();
         switch (ast.getType()) {
-            case TYPE:
-                GroovySourceAST typeName = (GroovySourceAST) ast.getFirstChild();
-                extractTypeName(typeName, type);
-                break;
-            case WILDCARD_TYPE:
-                // In the groovy grammar, the bounds are sibling of the ?, in the java grammar, they are the child
-                GroovySourceAST bounds = (GroovySourceAST) (groovy ? ast.getNextSibling() : ast.getFirstChild());
-                if (bounds == null) {
-                    type.setWildcard();
-                } else if (bounds.getType() == TYPE_UPPER_BOUNDS) {
-                    type.setUpperBounds(extractTypeName((GroovySourceAST) bounds.getFirstChild()));
-                } else if (bounds.getType() == TYPE_LOWER_BOUNDS) {
-                    type.setLowerBounds(extractTypeName((GroovySourceAST) bounds.getFirstChild()));
-                }
-                break;
-            case IDENT:
-            case DOT:
-                extractTypeName(ast, type);
-                break;
-            default:
-                throw new RuntimeException(String.format("Unexpected token in type name: %s", ast));
+        case TYPE:
+            GroovySourceAST typeName = (GroovySourceAST) ast.getFirstChild();
+            extractTypeName(typeName, type);
+            break;
+        case WILDCARD_TYPE:
+            // In the groovy grammar, the bounds are sibling of the ?, in the
+            // java grammar, they are the child
+            GroovySourceAST bounds = (GroovySourceAST) (groovy ? ast.getNextSibling() : ast.getFirstChild());
+            if (bounds == null) {
+                type.setWildcard();
+            } else if (bounds.getType() == TYPE_UPPER_BOUNDS) {
+                type.setUpperBounds(extractTypeName((GroovySourceAST) bounds.getFirstChild()));
+            } else if (bounds.getType() == TYPE_LOWER_BOUNDS) {
+                type.setLowerBounds(extractTypeName((GroovySourceAST) bounds.getFirstChild()));
+            }
+            break;
+        case IDENT:
+        case DOT:
+            extractTypeName(ast, type);
+            break;
+        default:
+            throw new RuntimeException(String.format("Unexpected token in type name: %s", ast));
         }
 
         return type;
@@ -406,42 +408,41 @@ public class EGradleSourceMetaDataVisitor extends VisitorAdapter {
             return;
         }
         switch (ast.getType()) {
-            case LITERAL_boolean:
-                type.setName("boolean");
-                return;
-            case LITERAL_byte:
-                type.setName("byte");
-                return;
-            case LITERAL_char:
-                type.setName("char");
-                return;
-            case LITERAL_double:
-                type.setName("double");
-                return;
-            case LITERAL_float:
-                type.setName("float");
-                return;
-            case LITERAL_int:
-                type.setName("int");
-                return;
-            case LITERAL_long:
-                type.setName("long");
-                return;
-            case LITERAL_void:
-                type.setName("void");
-                return;
-            case ARRAY_DECLARATOR:
-                extractTypeName((GroovySourceAST) ast.getFirstChild(), type);
-                type.addArrayDimension();
-                return;
+        case LITERAL_boolean:
+            type.setName("boolean");
+            return;
+        case LITERAL_byte:
+            type.setName("byte");
+            return;
+        case LITERAL_char:
+            type.setName("char");
+            return;
+        case LITERAL_double:
+            type.setName("double");
+            return;
+        case LITERAL_float:
+            type.setName("float");
+            return;
+        case LITERAL_int:
+            type.setName("int");
+            return;
+        case LITERAL_long:
+            type.setName("long");
+            return;
+        case LITERAL_void:
+            type.setName("void");
+            return;
+        case ARRAY_DECLARATOR:
+            extractTypeName((GroovySourceAST) ast.getFirstChild(), type);
+            type.addArrayDimension();
+            return;
         }
 
         type.setName(extractName(ast));
         GroovySourceAST typeArgs = ast.childOfType(TYPE_ARGUMENTS);
         if (typeArgs != null) {
-            for (
-                    GroovySourceAST child = (GroovySourceAST) typeArgs.getFirstChild(); child != null;
-                    child = (GroovySourceAST) child.getNextSibling()) {
+            for (GroovySourceAST child = (GroovySourceAST) typeArgs
+                    .getFirstChild(); child != null; child = (GroovySourceAST) child.getNextSibling()) {
                 assert child.getType() == TYPE_ARGUMENT;
                 type.addTypeArg(extractTypeName((GroovySourceAST) child.getFirstChild()));
             }
@@ -480,7 +481,7 @@ public class EGradleSourceMetaDataVisitor extends VisitorAdapter {
     private String extractIdent(GroovySourceAST t) {
         return t.childOfType(IDENT).getText();
     }
-    
+
     private String extractModifier(GroovySourceAST t) {
         return t.childOfType(MODIFIERS).getText();
     }
@@ -506,15 +507,15 @@ public class EGradleSourceMetaDataVisitor extends VisitorAdapter {
         if (child != null) {
             return extractName(child);
         }
-//        /* EGradle special */
-//        GroovySourceAST sibl = (GroovySourceAST) t.getNextSibling();
-//        if (sibl!=null){
-//            return extractName(sibl);
-//        }
-//        if (true){
-//            return t.toString();
-//        }
-//        /* eof - EGradle*/
+        // /* EGradle special */
+        // GroovySourceAST sibl = (GroovySourceAST) t.getNextSibling();
+        // if (sibl!=null){
+        // return extractName(sibl);
+        // }
+        // if (true){
+        // return t.toString();
+        // }
+        // /* eof - EGradle*/
         throw new RuntimeException(String.format("Unexpected token in name: %s", t));
     }
 
